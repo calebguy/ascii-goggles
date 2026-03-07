@@ -285,6 +285,32 @@ sliderCanvas.addEventListener('touchstart', (e) => { sliderDragging = true; hand
 window.addEventListener('touchmove', (e) => { if (sliderDragging) handleSliderInput(e.touches[0].clientX); }, { passive: true });
 window.addEventListener('touchend', () => { sliderDragging = false; });
 
+// Pinch to change resolution on mobile
+let pinchStartDist = 0;
+let pinchStartCols = cols;
+
+function getPinchDist(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+document.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2) {
+    pinchStartDist = getPinchDist(e.touches);
+    pinchStartCols = cols;
+  }
+}, { passive: true });
+
+document.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2) {
+    const dist = getPinchDist(e.touches);
+    const scale = dist / pinchStartDist;
+    // Pinch out (zoom in) = fewer cols (bigger chars), pinch in (zoom out) = more cols (smaller chars)
+    cols = Math.round(Math.max(sliderMin, Math.min(sliderMax, pinchStartCols / scale)));
+  }
+}, { passive: true });
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'c' || e.key === 'C') {
     toggleCamera();
