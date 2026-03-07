@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>seeing-ascii</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -14,6 +14,7 @@
       overflow: hidden;
       height: 100vh;
       width: 100vw;
+      touch-action: none;
     }
 
     #ascii-container {
@@ -73,19 +74,15 @@
     }
 
     #hint {
-      position: fixed;
-      bottom: 88px;
-      left: 12px;
-      font-size: 0.7rem;
-      color: #fff;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.1rem;
+      color: #03FF00;
       z-index: 11;
       font-family: monospace;
       pointer-events: none;
-      transition: bottom 0.3s;
-    }
-
-    #hint.bottom {
-      bottom: 8px;
     }
 
     @media (max-width: 768px), (hover: none) {
@@ -102,9 +99,9 @@
   <canvas id="ascii-canvas"></canvas>
   <div id="slider-bar">
     <canvas id="slider-canvas"></canvas>
+    <div id="hint">&lt;- h to toggle res -&gt;</div>
   </div>
   <div id="fps-counter"></div>
-  <div id="hint">h to toggle res</div>
 </div>
 
 <video id="video" autoplay playsinline></video>
@@ -134,7 +131,6 @@ let lastFpsTime = performance.now();
 
 if (isMobile) {
   document.getElementById('slider-bar').classList.add('hidden');
-  hint.classList.add('bottom');
 }
 
 const FONT_FAMILY = 'Courier New, Courier, monospace';
@@ -304,12 +300,12 @@ document.addEventListener('touchstart', (e) => {
 
 document.addEventListener('touchmove', (e) => {
   if (e.touches.length === 2) {
+    e.preventDefault();
     const dist = getPinchDist(e.touches);
     const scale = dist / pinchStartDist;
-    // Pinch out (zoom in) = fewer cols (bigger chars), pinch in (zoom out) = more cols (smaller chars)
     cols = Math.round(Math.max(sliderMin, Math.min(sliderMax, pinchStartCols / scale)));
   }
-}, { passive: true });
+}, { passive: false });
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'c' || e.key === 'C') {
@@ -318,7 +314,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'h' || e.key === 'H') {
     sliderHidden = !sliderHidden;
     document.getElementById('slider-bar').classList.toggle('hidden', sliderHidden);
-    hint.classList.toggle('bottom', sliderHidden);
+    hint.style.display = 'none';
   }
 });
 
@@ -430,25 +426,6 @@ function render() {
 
       outCtx.fillStyle = `rgb(${r},${g},${b})`;
       outCtx.fillText(ch, px, py);
-    }
-  }
-
-  // Update hint color
-  if (hint && !isMobile) {
-    const hintRect = hint.getBoundingClientRect();
-    const sx = Math.floor(hintRect.left * devicePixelRatio);
-    const sy = Math.floor(hintRect.top * devicePixelRatio);
-    const sw2 = Math.floor(hintRect.width * devicePixelRatio);
-    const sh2 = Math.floor(hintRect.height * devicePixelRatio);
-    if (sw2 > 0 && sh2 > 0 && sx >= 0 && sy >= 0 && sx + sw2 <= screenW && sy + sh2 <= screenH) {
-      const hintData = outCtx.getImageData(sx, sy, sw2, sh2).data;
-      let rSum = 0, gSum = 0, bSum = 0;
-      const pxCount = sw2 * sh2;
-      for (let p = 0; p < hintData.length; p += 4) {
-        rSum += hintData[p]; gSum += hintData[p+1]; bSum += hintData[p+2];
-      }
-      const avgBrightness = (0.299 * rSum + 0.587 * gSum + 0.114 * bSum) / pxCount / 255;
-      hint.style.color = avgBrightness > 0.5 ? '#000' : '#fff';
     }
   }
 
