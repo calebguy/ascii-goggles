@@ -1,15 +1,23 @@
 # seeing-ascii
 
-To install dependencies:
+![seeing-ascii](https://res.cloudinary.com/dm9gwanrg/image/upload/v1772926379/seeing-ascii-edited_c7hcwy.png)
+
+ascii all I see
+
+Live camera to ASCII art conversion in your browser.
+
+## Run
 
 ```bash
 bun install
+bun run server.ts
 ```
 
-To run:
+Open http://localhost:3000
 
-```bash
-bun run index.ts
-```
+## Controls
 
-This project was created using `bun init` in bun v1.3.6. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+- **H** — toggle resolution slider
+- **C** — switch front/back camera
+- **Pinch** (mobile) — change ASCII resolution
+- **Double-tap** (mobile) — switch camera
