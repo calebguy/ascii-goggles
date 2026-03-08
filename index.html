@@ -100,6 +100,30 @@
       #hint { display: none; }
     }
 
+    #screenshot-btn {
+      display: none;
+      position: fixed;
+      z-index: 20;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.5);
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+    }
+
+#screenshot-btn:active {
+      background: rgba(255,255,255,0.4);
+    }
+
+    @media (max-width: 768px), (hover: none) {
+      #screenshot-btn { display: block; }
+    }
+
     video { display: none; }
     #sample-canvas { display: none; }
   </style>
@@ -113,6 +137,7 @@
     <div id="hint">h to toggle</div>
   </div>
   <div id="fps-counter"></div>
+  <button id="screenshot-btn" aria-label="Take screenshot"></button>
 </div>
 
 <video id="video" autoplay playsinline></video>
@@ -132,7 +157,7 @@ const sliderCanvas = document.getElementById('slider-canvas');
 const sliderCtx = sliderCanvas.getContext('2d');
 
 const isMobile = window.matchMedia('(max-width: 768px), (hover: none)').matches;
-let cols = isMobile ? 170 : 120;
+let cols = isMobile ? 60 : 80;
 let mirror = true;
 let running = false;
 let sliderHidden = isMobile;
@@ -149,7 +174,7 @@ let charW, charH, fontSize;
 
 function measureFont(size) {
   fontSize = size;
-  outCtx.font = `${fontSize}px ${FONT_FAMILY}`;
+  outCtx.font = `${isMobile ? 'bold ' : ''}${fontSize}px ${FONT_FAMILY}`;
   charW = outCtx.measureText('M').width;
   charH = fontSize * 0.7;
 }
@@ -382,6 +407,78 @@ document.addEventListener('touchend', (e) => {
   }
 });
 
+const screenshotBtn = document.getElementById('screenshot-btn');
+
+// Position button initially (bottom-right)
+let btnX = window.innerWidth - 48 - 20;
+let btnY = window.innerHeight - 48 - 24;
+screenshotBtn.style.left = btnX + 'px';
+screenshotBtn.style.top = btnY + 'px';
+
+// Draggable logic
+let btnDragging = false;
+let btnDragged = false;
+let btnTouchId = null;
+let btnStartX, btnStartY, btnOrigX, btnOrigY;
+
+screenshotBtn.addEventListener('touchstart', (e) => {
+  const t = e.touches[0];
+  btnTouchId = t.identifier;
+  btnStartX = t.clientX;
+  btnStartY = t.clientY;
+  btnOrigX = btnX;
+  btnOrigY = btnY;
+  btnDragging = true;
+  btnDragged = false;
+}, { passive: true });
+
+window.addEventListener('touchmove', (e) => {
+  if (!btnDragging) return;
+  for (let i = 0; i < e.touches.length; i++) {
+    if (e.touches[i].identifier === btnTouchId) {
+      const t = e.touches[i];
+      const dx = t.clientX - btnStartX;
+      const dy = t.clientY - btnStartY;
+      if (!btnDragged && Math.abs(dx) + Math.abs(dy) > 8) btnDragged = true;
+      if (btnDragged) {
+        btnX = Math.max(0, Math.min(window.innerWidth - 48, btnOrigX + dx));
+        btnY = Math.max(0, Math.min(window.innerHeight - 48, btnOrigY + dy));
+        screenshotBtn.style.left = btnX + 'px';
+        screenshotBtn.style.top = btnY + 'px';
+      }
+      break;
+    }
+  }
+}, { passive: true });
+
+window.addEventListener('touchend', (e) => {
+  if (!btnDragging) return;
+  let found = false;
+  for (let i = 0; i < e.touches.length; i++) {
+    if (e.touches[i].identifier === btnTouchId) { found = true; break; }
+  }
+  if (!found) {
+    if (!btnDragged) takeScreenshot();
+    btnDragging = false;
+    btnTouchId = null;
+  }
+});
+
+function takeScreenshot() {
+  asciiCanvas.toBlob((blob) => {
+    const file = new File([blob], 'seeing-ascii.png', { type: 'image/png' });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file] });
+    } else {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'seeing-ascii.png';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+  }, 'image/png');
+}
+
 startCamera();
 
 function render() {
@@ -429,7 +526,7 @@ function render() {
 
   outCtx.fillStyle = '#0a0a0f';
   outCtx.fillRect(0, 0, screenW, screenH);
-  outCtx.font = `${fontSize}px ${FONT_FAMILY}`;
+  outCtx.font = `${isMobile ? 'bold ' : ''}${fontSize}px ${FONT_FAMILY}`;
   outCtx.textBaseline = 'top';
 
   const offsetX = (screenW - w * charW) / 2;
