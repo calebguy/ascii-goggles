@@ -17,4 +17,4 @@ Open http://localhost:3000
 
 ## Controls
 
-scroll to change res
+scroll to zoom, double tap to flip camera
