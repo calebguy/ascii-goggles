@@ -24,21 +24,21 @@
       color: #c8c8d0;
       font-family: monospace;
       overflow: hidden;
-      height: 100vh;
+      height: 100dvh;
       width: 100vw;
       touch-action: none;
     }
 
     #ascii-container {
       width: 100vw;
-      height: 100vh;
+      height: 100dvh;
       position: relative;
     }
 
     #ascii-canvas {
       display: block;
       width: 100vw;
-      height: 100vh;
+      height: 100dvh;
     }
 
 #fps-counter {
@@ -54,20 +54,24 @@
       display: none;
       position: fixed;
       z-index: 20;
-      width: 48px;
-      height: 48px;
+      left: 50%;
+      bottom: 30px;
+      transform: translateX(-50%);
+      width: 52px;
+      height: 52px;
       border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.5);
-      background: rgba(255,255,255,0.15);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
+      border: none;
+      background: white;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
       touch-action: none;
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.1), 0 0 0 7px rgba(255,255,255,0.3);
+      transition: transform 0.1s ease;
     }
 
 #screenshot-btn:active {
-      background: rgba(255,255,255,0.4);
+      background: rgba(220,220,220,1);
+      transform: translateX(-50%) scale(0.92);
     }
 
     #screenshot-btn { display: block; }
@@ -211,91 +215,12 @@ document.addEventListener('touchend', (e) => {
 
 const screenshotBtn = document.getElementById('screenshot-btn');
 
-// Position button (restore from localStorage or default to bottom-right)
-const savedBtn = localStorage.getItem('screenshotBtnPos');
-let btnX = savedBtn ? JSON.parse(savedBtn).x : window.innerWidth - 48 - 20;
-let btnY = savedBtn ? JSON.parse(savedBtn).y : window.innerHeight - 48 - 24;
-screenshotBtn.style.left = btnX + 'px';
-screenshotBtn.style.top = btnY + 'px';
 
-// Draggable logic
-let btnDragging = false;
-let btnDragged = false;
-let btnTouchId = null;
-let btnStartX, btnStartY, btnOrigX, btnOrigY;
-
-screenshotBtn.addEventListener('touchstart', (e) => {
-  const t = e.touches[0];
-  btnTouchId = t.identifier;
-  btnStartX = t.clientX;
-  btnStartY = t.clientY;
-  btnOrigX = btnX;
-  btnOrigY = btnY;
-  btnDragging = true;
-  btnDragged = false;
-}, { passive: true });
-
-window.addEventListener('touchmove', (e) => {
-  if (!btnDragging) return;
-  for (let i = 0; i < e.touches.length; i++) {
-    if (e.touches[i].identifier === btnTouchId) {
-      const t = e.touches[i];
-      const dx = t.clientX - btnStartX;
-      const dy = t.clientY - btnStartY;
-      if (!btnDragged && Math.abs(dx) + Math.abs(dy) > 8) btnDragged = true;
-      if (btnDragged) {
-        btnX = Math.max(0, Math.min(window.innerWidth - 48, btnOrigX + dx));
-        btnY = Math.max(0, Math.min(window.innerHeight - 48, btnOrigY + dy));
-        screenshotBtn.style.left = btnX + 'px';
-        screenshotBtn.style.top = btnY + 'px';
-      }
-      break;
-    }
-  }
-}, { passive: true });
-
-window.addEventListener('touchend', (e) => {
-  if (!btnDragging) return;
-  let found = false;
-  for (let i = 0; i < e.touches.length; i++) {
-    if (e.touches[i].identifier === btnTouchId) { found = true; break; }
-  }
-  if (!found) {
-    if (!btnDragged) takeScreenshot();
-    else localStorage.setItem('screenshotBtnPos', JSON.stringify({ x: btnX, y: btnY }));
-    btnDragging = false;
-    btnTouchId = null;
-  }
-});
-
-screenshotBtn.addEventListener('mousedown', (e) => {
-  btnStartX = e.clientX;
-  btnStartY = e.clientY;
-  btnOrigX = btnX;
-  btnOrigY = btnY;
-  btnDragging = true;
-  btnDragged = false;
+// Click/tap to screenshot (no drag)
+screenshotBtn.addEventListener('click', () => takeScreenshot());
+screenshotBtn.addEventListener('touchend', (e) => {
   e.preventDefault();
-});
-
-window.addEventListener('mousemove', (e) => {
-  if (!btnDragging || btnTouchId !== null) return;
-  const dx = e.clientX - btnStartX;
-  const dy = e.clientY - btnStartY;
-  if (!btnDragged && Math.abs(dx) + Math.abs(dy) > 4) btnDragged = true;
-  if (btnDragged) {
-    btnX = Math.max(0, Math.min(window.innerWidth - 48, btnOrigX + dx));
-    btnY = Math.max(0, Math.min(window.innerHeight - 48, btnOrigY + dy));
-    screenshotBtn.style.left = btnX + 'px';
-    screenshotBtn.style.top = btnY + 'px';
-  }
-});
-
-window.addEventListener('mouseup', () => {
-  if (!btnDragging || btnTouchId !== null) return;
-  if (!btnDragged) takeScreenshot();
-  else localStorage.setItem('screenshotBtnPos', JSON.stringify({ x: btnX, y: btnY }));
-  btnDragging = false;
+  takeScreenshot();
 });
 
 function takeScreenshot() {
