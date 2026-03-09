@@ -56,7 +56,7 @@ body {
 }
 
 #rotate-btn {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   position: fixed;
@@ -85,6 +85,12 @@ body {
 
 #rotate-btn:active {
   transform: scale(0.9);
+}
+
+@media (max-width: 768px) {
+  #rotate-btn {
+    display: flex;
+  }
 }
 
 video { display: none; }
