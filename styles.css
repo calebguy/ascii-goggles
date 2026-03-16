@@ -45,6 +45,9 @@ body {
   background: white;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
   touch-action: none;
   box-shadow: 0 0 0 3px rgba(0,0,0,0.1), 0 0 0 7px rgba(255,255,255,0.3);
   transition: transform 0.1s ease;
