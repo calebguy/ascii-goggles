@@ -28,7 +28,8 @@
 </div>
 
 <div id="camera-prompt">
-  <p id="camera-prompt-text">accept camera perms for ascii ☉ ‿ ⚆</p>
+  <p id="camera-prompt-text">accept camera perms for ascii</p>
+  <div class="arrows">↓ ↓ ↓</div>
   <button id="retry-btn" style="display:none;">try again</button>
 </div>
 
@@ -113,7 +114,7 @@ retryBtn.addEventListener('click', () => startCamera());
 
 async function startCamera() {
   retryBtn.style.display = 'none';
-  cameraPromptText.textContent = 'accept camera perms for ascii ☉ ‿ ⚆';
+  cameraPromptText.textContent = 'accept camera perms for ascii';
   // Only show the prompt if permission hasn't been granted yet
   if (navigator.permissions && navigator.permissions.query) {
     try {
@@ -145,7 +146,7 @@ async function startCamera() {
     }
   } catch (err) {
     console.error('Camera access denied:', err);
-    cameraPromptText.textContent = 'camera denied ☉ _ ⚆';
+    cameraPromptText.textContent = 'camera denied';
     retryBtn.style.display = 'block';
   }
 }
@@ -310,11 +311,17 @@ function saveRecording() {
   const mime = recorder.mimeType || 'video/webm';
   const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
   const blob = new Blob(recorderChunks, { type: mime });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `seeing-ascii-${ts}.${ext}`;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  const filename = `seeing-ascii-${ts}.${ext}`;
+  const file = new File([blob], filename, { type: mime });
+  if (isMobile && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file] });
+  } else {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
 
   if (recordingStream) {
     recordingStream.getTracks().forEach((track) => track.stop());
