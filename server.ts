@@ -12,4 +12,4 @@ Bun.serve({
 	},
 });
 
-console.log("Seeing ASCII running at http://localhost:3000");
+console.log("Seeing ASCII running at http://localhost:3001");
