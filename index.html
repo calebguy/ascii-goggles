@@ -114,7 +114,19 @@ retryBtn.addEventListener('click', () => startCamera());
 async function startCamera() {
   retryBtn.style.display = 'none';
   cameraPromptText.textContent = 'accept camera perms for ascii ☉ ‿ ⚆';
-  cameraPrompt.style.display = 'flex';
+  // Only show the prompt if permission hasn't been granted yet
+  if (navigator.permissions && navigator.permissions.query) {
+    try {
+      const status = await navigator.permissions.query({ name: 'camera' });
+      if (status.state !== 'granted') {
+        cameraPrompt.style.display = 'flex';
+      }
+    } catch {
+      cameraPrompt.style.display = 'flex';
+    }
+  } else {
+    cameraPrompt.style.display = 'flex';
+  }
   // Stop existing tracks
   if (video.srcObject) {
     video.srcObject.getTracks().forEach(t => t.stop());
@@ -170,12 +182,38 @@ document.addEventListener('touchend', (e) => {
 
 const screenshotBtn = document.getElementById('screenshot-btn');
 
+const HOLD_TO_RECORD_MS = 380;
+let holdTimer = null;
+let activePointerId = null;
+let didHoldToRecord = false;
+let recorder = null;
+let recorderChunks = [];
+let recordingStream = null;
 
-// Click/tap to screenshot (no drag)
-screenshotBtn.addEventListener('click', () => takeScreenshot());
-screenshotBtn.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  takeScreenshot();
+screenshotBtn.addEventListener('pointerdown', (e) => {
+  if (activePointerId !== null) return;
+  activePointerId = e.pointerId;
+  didHoldToRecord = false;
+  screenshotBtn.setPointerCapture(e.pointerId);
+  holdTimer = setTimeout(() => {
+    didHoldToRecord = true;
+    startRecording();
+  }, HOLD_TO_RECORD_MS);
+});
+
+screenshotBtn.addEventListener('pointerup', (e) => {
+  if (e.pointerId !== activePointerId) return;
+  finishCaptureGesture();
+});
+
+screenshotBtn.addEventListener('pointercancel', (e) => {
+  if (e.pointerId !== activePointerId) return;
+  resetCaptureGesture();
+  if (isRecording()) stopRecording();
+});
+
+screenshotBtn.addEventListener('lostpointercapture', () => {
+  resetCaptureGesture();
 });
 
 // Rotate camera button
@@ -207,6 +245,83 @@ function takeScreenshot() {
       URL.revokeObjectURL(a.href);
     }
   }, 'image/png');
+}
+
+function resetCaptureGesture() {
+  if (holdTimer) {
+    clearTimeout(holdTimer);
+    holdTimer = null;
+  }
+  activePointerId = null;
+}
+
+function finishCaptureGesture() {
+  if (holdTimer) {
+    clearTimeout(holdTimer);
+    holdTimer = null;
+  }
+  if (didHoldToRecord) {
+    stopRecording();
+  } else {
+    takeScreenshot();
+  }
+  activePointerId = null;
+}
+
+function isRecording() {
+  return recorder && recorder.state === 'recording';
+}
+
+function startRecording() {
+  if (isRecording()) return;
+  if (!window.MediaRecorder || !asciiCanvas.captureStream) {
+    console.error('MediaRecorder/captureStream not supported in this browser.');
+    return;
+  }
+
+  const mimeType = ['video/mp4;codecs=h264', 'video/mp4;codecs=avc1', 'video/mp4',
+    'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+    .find(t => MediaRecorder.isTypeSupported(t)) || 'video/webm';
+  recordingStream = asciiCanvas.captureStream(30);
+  recorderChunks = [];
+  recorder = new MediaRecorder(recordingStream, { mimeType });
+  recorder.ondataavailable = (event) => {
+    if (event.data && event.data.size > 0) recorderChunks.push(event.data);
+  };
+  recorder.onstop = saveRecording;
+  recorder.start();
+  screenshotBtn.classList.add('recording');
+}
+
+function stopRecording() {
+  if (!isRecording()) return;
+  recorder.stop();
+  screenshotBtn.classList.remove('recording');
+}
+
+function saveRecording() {
+  const now = new Date();
+  const ts = now.getFullYear() + '-'
+    + String(now.getMonth() + 1).padStart(2, '0') + '-'
+    + String(now.getDate()).padStart(2, '0') + '-'
+    + String(now.getHours()).padStart(2, '0')
+    + String(now.getMinutes()).padStart(2, '0')
+    + String(now.getSeconds()).padStart(2, '0');
+  const mime = recorder.mimeType || 'video/webm';
+  const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+  const blob = new Blob(recorderChunks, { type: mime });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `seeing-ascii-${ts}.${ext}`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  if (recordingStream) {
+    recordingStream.getTracks().forEach((track) => track.stop());
+    recordingStream = null;
+  }
+  recorder = null;
+  recorderChunks = [];
 }
 
 startCamera();
