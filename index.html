@@ -220,6 +220,7 @@ screenshotBtn.addEventListener('pointerdown', (e) => {
     didHoldToRecord = true;
     startRecording();
     lockTrack.classList.add('visible');
+    rotateBtn.style.display = 'none';
   }, HOLD_TO_RECORD_MS);
 });
 
@@ -265,6 +266,7 @@ function resetLockTrack() {
   lockThumb.style.transition = 'transform 0.25s ease';
   lockThumb.style.transform = 'translateX(0)';
   lockTrack.classList.remove('visible');
+  rotateBtn.style.display = '';
 }
 
 function enterLockedMode() {
