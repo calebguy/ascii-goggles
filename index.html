@@ -4,18 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'><rect width='1' height='1' fill='%23000'/></svg>">
-  <title>seeing-ascii</title>
+  <title>ascii-goggles</title>
   <meta name="description" content="ascii all I see">
-  <meta property="og:title" content="seeing-ascii">
+  <meta property="og:title" content="ascii-goggles">
   <meta property="og:description" content="ascii all I see">
-  <meta property="og:image" content="https://res.cloudinary.com/dm9gwanrg/image/upload/v1772926379/seeing-ascii-edited_c7hcwy.png">
+  <meta property="og:image" content="https://res.cloudinary.com/dm9gwanrg/image/upload/v1772926379/ascii-goggles-edited_c7hcwy.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="675">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="seeing-ascii">
+  <meta name="twitter:title" content="ascii-goggles">
   <meta name="twitter:description" content="ascii all I see">
-  <meta name="twitter:image" content="https://res.cloudinary.com/dm9gwanrg/image/upload/v1772926379/seeing-ascii-edited_c7hcwy.png">
+  <meta name="twitter:image" content="https://res.cloudinary.com/dm9gwanrg/image/upload/v1772926379/ascii-goggles-edited_c7hcwy.png">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -233,7 +233,7 @@ function takeScreenshot() {
     + String(now.getHours()).padStart(2, '0')
     + String(now.getMinutes()).padStart(2, '0')
     + String(now.getSeconds()).padStart(2, '0');
-  const filename = `seeing-ascii-${ts}.png`;
+  const filename = `ascii-goggles-${ts}.png`;
   asciiCanvas.toBlob((blob) => {
     const file = new File([blob], filename, { type: 'image/png' });
     if (isMobile && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -311,7 +311,7 @@ function saveRecording() {
   const mime = recorder.mimeType || 'video/webm';
   const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
   const blob = new Blob(recorderChunks, { type: mime });
-  const filename = `seeing-ascii-${ts}.${ext}`;
+  const filename = `ascii-goggles-${ts}.${ext}`;
   const file = new File([blob], filename, { type: mime });
   if (isMobile && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
     navigator.share({ files: [file] });
