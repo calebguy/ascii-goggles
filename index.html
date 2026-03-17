@@ -349,56 +349,54 @@ function startRecording() {
   recorder.ondataavailable = (event) => {
     if (event.data && event.data.size > 0) recorderChunks.push(event.data);
   };
-  recorder.start();
+  recorder.start(100); // flush data every 100ms so we can stop synchronously
   screenshotBtn.classList.add('recording');
 }
 
-// Returns a promise that resolves with the video blob once the recorder stops
-function stopRecording() {
-  return new Promise((resolve) => {
-    if (!isRecording()) { resolve(null); return; }
-    const mime = recorder.mimeType || 'video/mp4';
-    recorder.onstop = () => {
-      const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
-      const blob = new Blob(recorderChunks, { type: mime });
-      const now = new Date();
-      const ts = now.getFullYear() + '-'
-        + String(now.getMonth() + 1).padStart(2, '0') + '-'
-        + String(now.getDate()).padStart(2, '0') + '-'
-        + String(now.getHours()).padStart(2, '0')
-        + String(now.getMinutes()).padStart(2, '0')
-        + String(now.getSeconds()).padStart(2, '0');
-      const filename = `ascii-goggles-${ts}.${ext}`;
-      if (recordingStream) {
-        recordingStream.getTracks().forEach((track) => track.stop());
-        recordingStream = null;
-      }
-      recorder = null;
-      recorderChunks = [];
-      resolve({ blob, filename, mime });
-    };
-    recorder.stop();
-    screenshotBtn.classList.remove('recording');
-    screenshotBtn.classList.remove('recording-locked');
-    lockTrack.classList.remove('visible');
-    recordingLocked = false;
-  });
+function stopAndShareRecording() {
+  if (!isRecording()) return;
+  const mime = recorder.mimeType || 'video/mp4';
+  // Request any remaining data, then stop
+  recorder.requestData();
+  recorder.stop();
+
+  screenshotBtn.classList.remove('recording');
+  screenshotBtn.classList.remove('recording-locked');
+  lockTrack.classList.remove('visible');
+  recordingLocked = false;
+
+  const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+  const blob = new Blob(recorderChunks, { type: mime });
+  const now = new Date();
+  const ts = now.getFullYear() + '-'
+    + String(now.getMonth() + 1).padStart(2, '0') + '-'
+    + String(now.getDate()).padStart(2, '0') + '-'
+    + String(now.getHours()).padStart(2, '0')
+    + String(now.getMinutes()).padStart(2, '0')
+    + String(now.getSeconds()).padStart(2, '0');
+  const filename = `ascii-goggles-${ts}.${ext}`;
+  const file = new File([blob], filename, { type: mime });
+
+  if (isMobile && navigator.share) {
+    navigator.share({ files: [file] }).catch(() => {
+      downloadBlob(blob, filename);
+    });
+  } else {
+    downloadBlob(blob, filename);
+  }
+
+  if (recordingStream) {
+    recordingStream.getTracks().forEach((track) => track.stop());
+    recordingStream = null;
+  }
+  recorder = null;
+  recorderChunks = [];
 }
 
-async function stopAndShareRecording() {
-  const result = await stopRecording();
-  if (!result) return;
-  const { blob, filename, mime } = result;
-  const file = new File([blob], filename, { type: mime });
-  if (isMobile && navigator.share) {
-    try {
-      await navigator.share({ files: [file] });
-      return;
-    } catch {}
-  }
+function downloadBlob(b, name) {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
+  a.href = URL.createObjectURL(b);
+  a.download = name;
   a.click();
   URL.revokeObjectURL(a.href);
 }
