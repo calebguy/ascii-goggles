@@ -207,8 +207,7 @@ let recordingStream = null;
 screenshotBtn.addEventListener('pointerdown', (e) => {
   // If recording is locked, tap to stop
   if (recordingLocked) {
-    stopRecording();
-    exitLockedMode();
+    stopAndShareRecording();
     return;
   }
   if (activePointerId !== null) return;
@@ -253,7 +252,7 @@ screenshotBtn.addEventListener('pointercancel', (e) => {
   if (recordingLocked) return;
   resetLockTrack();
   resetCaptureGesture();
-  if (isRecording()) stopRecording();
+  if (isRecording()) stopAndShareRecording();
 });
 
 screenshotBtn.addEventListener('lostpointercapture', () => {
@@ -277,10 +276,6 @@ function enterLockedMode() {
   screenshotBtn.classList.add('recording-locked');
 }
 
-function exitLockedMode() {
-  recordingLocked = false;
-  screenshotBtn.classList.remove('recording-locked');
-}
 
 // Rotate camera button
 const rotateBtn = document.getElementById('rotate-btn');
@@ -327,7 +322,7 @@ function finishCaptureGesture() {
     holdTimer = null;
   }
   if (didHoldToRecord) {
-    stopRecording();
+    stopAndShareRecording();
   } else {
     takeScreenshot();
   }
@@ -354,58 +349,58 @@ function startRecording() {
   recorder.ondataavailable = (event) => {
     if (event.data && event.data.size > 0) recorderChunks.push(event.data);
   };
-  recorder.onstop = saveRecording;
   recorder.start();
   screenshotBtn.classList.add('recording');
 }
 
-let savedMimeType = '';
-
+// Returns a promise that resolves with the video blob once the recorder stops
 function stopRecording() {
-  if (!isRecording()) return;
-  savedMimeType = recorder.mimeType || 'video/mp4';
-  recorder.stop();
-  screenshotBtn.classList.remove('recording');
-  screenshotBtn.classList.remove('recording-locked');
-  lockTrack.classList.remove('visible');
-  recordingLocked = false;
+  return new Promise((resolve) => {
+    if (!isRecording()) { resolve(null); return; }
+    const mime = recorder.mimeType || 'video/mp4';
+    recorder.onstop = () => {
+      const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+      const blob = new Blob(recorderChunks, { type: mime });
+      const now = new Date();
+      const ts = now.getFullYear() + '-'
+        + String(now.getMonth() + 1).padStart(2, '0') + '-'
+        + String(now.getDate()).padStart(2, '0') + '-'
+        + String(now.getHours()).padStart(2, '0')
+        + String(now.getMinutes()).padStart(2, '0')
+        + String(now.getSeconds()).padStart(2, '0');
+      const filename = `ascii-goggles-${ts}.${ext}`;
+      if (recordingStream) {
+        recordingStream.getTracks().forEach((track) => track.stop());
+        recordingStream = null;
+      }
+      recorder = null;
+      recorderChunks = [];
+      resolve({ blob, filename, mime });
+    };
+    recorder.stop();
+    screenshotBtn.classList.remove('recording');
+    screenshotBtn.classList.remove('recording-locked');
+    lockTrack.classList.remove('visible');
+    recordingLocked = false;
+  });
 }
 
-function saveRecording() {
-  const now = new Date();
-  const ts = now.getFullYear() + '-'
-    + String(now.getMonth() + 1).padStart(2, '0') + '-'
-    + String(now.getDate()).padStart(2, '0') + '-'
-    + String(now.getHours()).padStart(2, '0')
-    + String(now.getMinutes()).padStart(2, '0')
-    + String(now.getSeconds()).padStart(2, '0');
-  const mime = savedMimeType || 'video/mp4';
-  const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
-  const blob = new Blob(recorderChunks, { type: mime });
-  const filename = `ascii-goggles-${ts}.${ext}`;
+async function stopAndShareRecording() {
+  const result = await stopRecording();
+  if (!result) return;
+  const { blob, filename, mime } = result;
   const file = new File([blob], filename, { type: mime });
   if (isMobile && navigator.share) {
-    navigator.share({ files: [file] }).catch(() => {
-      downloadBlob(blob, filename);
-    });
-  } else {
-    downloadBlob(blob, filename);
+    try {
+      await navigator.share({ files: [file] });
+      return;
+    } catch {}
   }
-
-  function downloadBlob(b, name) {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(b);
-    a.download = name;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
-
-  if (recordingStream) {
-    recordingStream.getTracks().forEach((track) => track.stop());
-    recordingStream = null;
-  }
-  recorder = null;
-  recorderChunks = [];
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 startCamera();
