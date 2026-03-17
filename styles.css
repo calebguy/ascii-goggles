@@ -70,6 +70,70 @@ body {
   100% { transform: translateX(-50%) scale(1); }
 }
 
+#screenshot-btn.recording-locked {
+  background: #ff3b30;
+  border-radius: 16px;
+  width: 52px;
+  height: 52px;
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.1), 0 0 0 7px rgba(255,59,48,0.35);
+  animation: none;
+}
+
+#lock-track {
+  display: none;
+  position: fixed;
+  z-index: 20;
+  left: calc(50% + 40px);
+  bottom: 42px;
+  width: 100px;
+  height: 30px;
+  align-items: center;
+}
+
+#lock-track.visible {
+  display: flex;
+}
+
+#lock-track-line {
+  position: absolute;
+  left: 0;
+  right: 36px;
+  height: 3px;
+  background: rgba(255,255,255,0.6);
+  border-radius: 2px;
+}
+
+#lock-thumb {
+  position: absolute;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  transform: translateX(0);
+  transition: transform 0.25s ease;
+}
+
+#lock-icon {
+  position: absolute;
+  right: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.8);
+  background: rgba(255,255,255,0.15);
+  border-radius: 50%;
+  transition: color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+}
+
+#lock-icon.highlight {
+  color: white;
+  background: rgba(255,255,255,0.3);
+  transform: scale(1.25);
+}
+
 #rotate-btn {
   display: none;
   align-items: center;

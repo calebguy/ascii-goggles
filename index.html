@@ -24,6 +24,13 @@
   <canvas id="ascii-canvas"></canvas>
 <div id="fps-counter"></div>
   <button id="screenshot-btn" aria-label="Take screenshot"></button>
+  <div id="lock-track">
+    <div id="lock-track-line"></div>
+    <div id="lock-thumb"></div>
+    <div id="lock-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+    </div>
+  </div>
   <button id="rotate-btn" aria-label="Rotate camera"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path></svg></button>
 </div>
 
@@ -182,40 +189,96 @@ document.addEventListener('touchend', (e) => {
 });
 
 const screenshotBtn = document.getElementById('screenshot-btn');
+const lockTrack = document.getElementById('lock-track');
+const lockIcon = document.getElementById('lock-icon');
+const lockThumb = document.getElementById('lock-thumb');
 
 const HOLD_TO_RECORD_MS = 380;
+const LOCK_DRAG_THRESHOLD = 80; // px to drag right to lock
 let holdTimer = null;
 let activePointerId = null;
 let didHoldToRecord = false;
+let recordingLocked = false;
+let pointerStartX = 0;
 let recorder = null;
 let recorderChunks = [];
 let recordingStream = null;
 
 screenshotBtn.addEventListener('pointerdown', (e) => {
+  // If recording is locked, tap to stop
+  if (recordingLocked) {
+    stopRecording();
+    exitLockedMode();
+    return;
+  }
   if (activePointerId !== null) return;
   activePointerId = e.pointerId;
+  pointerStartX = e.clientX;
   didHoldToRecord = false;
   screenshotBtn.setPointerCapture(e.pointerId);
   holdTimer = setTimeout(() => {
     didHoldToRecord = true;
     startRecording();
+    lockTrack.classList.add('visible');
   }, HOLD_TO_RECORD_MS);
+});
+
+screenshotBtn.addEventListener('pointermove', (e) => {
+  if (e.pointerId !== activePointerId || !didHoldToRecord || recordingLocked) return;
+  const dx = e.clientX - pointerStartX;
+  const clampedDx = Math.max(0, Math.min(LOCK_DRAG_THRESHOLD, dx));
+  // Move thumb without transition during drag
+  lockThumb.style.transition = 'none';
+  lockThumb.style.transform = `translateX(${clampedDx}px)`;
+  if (clampedDx / LOCK_DRAG_THRESHOLD > 0.7) {
+    lockIcon.classList.add('highlight');
+  } else {
+    lockIcon.classList.remove('highlight');
+  }
+  if (dx >= LOCK_DRAG_THRESHOLD) {
+    enterLockedMode();
+  }
 });
 
 screenshotBtn.addEventListener('pointerup', (e) => {
   if (e.pointerId !== activePointerId) return;
+  if (recordingLocked) return;
+  resetLockTrack();
   finishCaptureGesture();
 });
 
 screenshotBtn.addEventListener('pointercancel', (e) => {
   if (e.pointerId !== activePointerId) return;
+  if (recordingLocked) return;
+  resetLockTrack();
   resetCaptureGesture();
   if (isRecording()) stopRecording();
 });
 
 screenshotBtn.addEventListener('lostpointercapture', () => {
+  if (recordingLocked) return;
   resetCaptureGesture();
 });
+
+function resetLockTrack() {
+  lockIcon.classList.remove('highlight');
+  lockThumb.style.transition = 'transform 0.25s ease';
+  lockThumb.style.transform = 'translateX(0)';
+  lockTrack.classList.remove('visible');
+}
+
+function enterLockedMode() {
+  recordingLocked = true;
+  activePointerId = null;
+  resetLockTrack();
+  screenshotBtn.classList.remove('recording');
+  screenshotBtn.classList.add('recording-locked');
+}
+
+function exitLockedMode() {
+  recordingLocked = false;
+  screenshotBtn.classList.remove('recording-locked');
+}
 
 // Rotate camera button
 const rotateBtn = document.getElementById('rotate-btn');
@@ -298,6 +361,9 @@ function stopRecording() {
   if (!isRecording()) return;
   recorder.stop();
   screenshotBtn.classList.remove('recording');
+  screenshotBtn.classList.remove('recording-locked');
+  lockTrack.classList.remove('visible');
+  recordingLocked = false;
 }
 
 function saveRecording() {

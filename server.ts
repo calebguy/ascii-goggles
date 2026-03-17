@@ -12,4 +12,4 @@ Bun.serve({
 	},
 });
 
-console.log("Seeing ASCII running at http://localhost:3001");
+console.log("ascii-goggles running at http://localhost:3001");
