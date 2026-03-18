@@ -204,8 +204,11 @@ let recorder = null;
 let recorderChunks = [];
 let recordingStream = null;
 
+let pendingStopShare = false;
+
 screenshotBtn.addEventListener('click', () => {
-  if (recordingLocked) {
+  if (recordingLocked || pendingStopShare) {
+    pendingStopShare = false;
     stopAndShareRecording();
   }
 });
@@ -324,7 +327,8 @@ function finishCaptureGesture() {
     holdTimer = null;
   }
   if (didHoldToRecord) {
-    stopAndShareRecording();
+    pendingStopShare = true;
+    // click event fires after pointerup, will handle stop+share there
   } else {
     takeScreenshot();
   }
