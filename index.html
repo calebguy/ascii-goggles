@@ -204,12 +204,18 @@ let recorder = null;
 let recorderChunks = [];
 let recordingStream = null;
 
-let pendingStopShare = false;
+let pendingShareBlob = null; // { blob, filename, mime } awaiting a click to share
 
 screenshotBtn.addEventListener('click', () => {
-  if (recordingLocked || pendingStopShare) {
-    pendingStopShare = false;
+  // Share pending blob from hold-and-release, or stop locked recording
+  if (recordingLocked) {
     stopAndShareRecording();
+    return;
+  }
+  if (pendingShareBlob) {
+    const { blob, filename, mime } = pendingShareBlob;
+    pendingShareBlob = null;
+    shareOrDownload(blob, filename, mime);
   }
 });
 
@@ -232,7 +238,6 @@ screenshotBtn.addEventListener('pointermove', (e) => {
   if (e.pointerId !== activePointerId || !didHoldToRecord || recordingLocked) return;
   const dx = e.clientX - pointerStartX;
   const clampedDx = Math.max(0, Math.min(LOCK_DRAG_THRESHOLD, dx));
-  // Move thumb without transition during drag
   lockThumb.style.transition = 'none';
   lockThumb.style.transform = `translateX(${clampedDx}px)`;
   if (clampedDx / LOCK_DRAG_THRESHOLD > 0.7) {
@@ -249,7 +254,20 @@ screenshotBtn.addEventListener('pointerup', (e) => {
   if (e.pointerId !== activePointerId) return;
   if (recordingLocked) return;
   resetLockTrack();
-  finishCaptureGesture();
+  if (holdTimer) {
+    clearTimeout(holdTimer);
+    holdTimer = null;
+  }
+  if (didHoldToRecord) {
+    // Stop recorder and stash the blob; the click event will share it
+    stopRecording().then((result) => {
+      if (!result) return;
+      pendingShareBlob = result;
+    });
+  } else {
+    takeScreenshot();
+  }
+  activePointerId = null;
 });
 
 screenshotBtn.addEventListener('pointercancel', (e) => {
@@ -257,7 +275,7 @@ screenshotBtn.addEventListener('pointercancel', (e) => {
   if (recordingLocked) return;
   resetLockTrack();
   resetCaptureGesture();
-  if (isRecording()) stopAndShareRecording();
+  if (isRecording()) stopRecording();
 });
 
 screenshotBtn.addEventListener('lostpointercapture', () => {
@@ -321,20 +339,6 @@ function resetCaptureGesture() {
   activePointerId = null;
 }
 
-function finishCaptureGesture() {
-  if (holdTimer) {
-    clearTimeout(holdTimer);
-    holdTimer = null;
-  }
-  if (didHoldToRecord) {
-    pendingStopShare = true;
-    // click event fires after pointerup, will handle stop+share there
-  } else {
-    takeScreenshot();
-  }
-  activePointerId = null;
-}
-
 function isRecording() {
   return recorder && recorder.state === 'recording';
 }
@@ -390,22 +394,30 @@ function stopRecording() {
   });
 }
 
+function shareOrDownload(blob, filename, mime) {
+  const file = new File([blob], filename, { type: mime });
+  if (isMobile && navigator.share) {
+    navigator.share({ files: [file] }).catch(() => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+  } else {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+}
+
 async function stopAndShareRecording() {
   const result = await stopRecording();
   if (!result) return;
   const { blob, filename, mime } = result;
-  const file = new File([blob], filename, { type: mime });
-  if (isMobile && navigator.share) {
-    try {
-      await navigator.share({ files: [file] });
-      return;
-    } catch {}
-  }
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  shareOrDownload(blob, filename, mime);
 }
 
 startCamera();
