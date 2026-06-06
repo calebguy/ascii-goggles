@@ -32,6 +32,7 @@
     </div>
   </div>
   <button id="rotate-btn" aria-label="Rotate camera"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path></svg></button>
+  <button id="background-toggle-btn" type="button" aria-label="Switch to black background" aria-pressed="false">◐</button>
 </div>
 
 <div id="camera-prompt">
@@ -52,22 +53,30 @@ const sampleCtx = sampleCanvas.getContext('2d', { willReadFrequently: true });
 const asciiCanvas = document.getElementById('ascii-canvas');
 const outCtx = asciiCanvas.getContext('2d');
 const fpsCounter = document.getElementById('fps-counter');
+const backgroundToggleBtn = document.getElementById('background-toggle-btn');
 
 const isMobile = window.matchMedia('(max-width: 768px), (hover: none)').matches;
-let cols = isMobile ? 60 : 80;
+let cols = isMobile ? 90 : 120;
 let mirror = true;
 let running = false;
 let frameCount = 0;
 let lastFpsTime = performance.now();
+const LIGHT_BACKGROUND = '#ffffff';
+const DARK_BACKGROUND = '#0a0a0f';
+let canvasBackground = LIGHT_BACKGROUND;
+let darkBackground = false;
 
 const FONT_FAMILY = 'Courier New, Courier, monospace';
 let charW, charH, fontSize;
+const LETTER_X_SCALE = 0.78;
+const LETTER_Y_SCALE = 0.62;
+
 
 function measureFont(size) {
   fontSize = size;
   outCtx.font = `bold ${fontSize}px ${FONT_FAMILY}`;
-  charW = outCtx.measureText('M').width;
-  charH = fontSize * 0.7;
+  charW = outCtx.measureText('M').width * LETTER_X_SCALE;
+  charH = fontSize * LETTER_Y_SCALE;
 }
 
 const colsMin = 40;
@@ -110,6 +119,9 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'c' || e.key === 'C') {
     toggleCamera();
   }
+  if (e.key === 'b' || e.key === 'B') {
+    toggleBackground();
+  }
 });
 
 let facingMode = 'user';
@@ -118,6 +130,20 @@ const cameraPromptText = document.getElementById('camera-prompt-text');
 const retryBtn = document.getElementById('retry-btn');
 
 retryBtn.addEventListener('click', () => startCamera());
+
+function setBackground(isDark) {
+  darkBackground = isDark;
+  canvasBackground = isDark ? DARK_BACKGROUND : LIGHT_BACKGROUND;
+  document.body.classList.toggle('dark-background', isDark);
+  backgroundToggleBtn.setAttribute('aria-pressed', String(isDark));
+  backgroundToggleBtn.setAttribute('aria-label', isDark ? 'Switch to white background' : 'Switch to black background');
+}
+
+function toggleBackground() {
+  setBackground(!darkBackground);
+}
+
+backgroundToggleBtn.addEventListener('click', toggleBackground);
 
 async function startCamera() {
   retryBtn.style.display = 'none';
@@ -465,7 +491,7 @@ function render() {
   const data = imageData.data;
   const len = charset.length;
 
-  outCtx.fillStyle = '#0a0a0f';
+  outCtx.fillStyle = canvasBackground;
   outCtx.fillRect(0, 0, screenW, screenH);
   outCtx.font = `bold ${fontSize}px ${FONT_FAMILY}`;
   outCtx.textBaseline = 'top';

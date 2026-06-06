@@ -1,13 +1,17 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  background: #0a0a0f;
+  background: #ffffff;
   color: #c8c8d0;
   font-family: monospace;
   overflow: hidden;
   height: 100dvh;
   width: 100vw;
   touch-action: none;
+}
+
+body.dark-background {
+  background: #0a0a0f;
 }
 
 #ascii-container {
@@ -146,7 +150,7 @@ body {
   height: 42px;
   border-radius: 50%;
   border: none;
-  background: rgba(255,255,255,0.15);
+  background: rgba(0,0,0,0.08);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   touch-action: none;
@@ -157,13 +161,49 @@ body {
 #rotate-btn svg {
   width: 30px;
   height: 30px;
-  color: white;
+  color: #111;
   display: block;
   margin: auto;
 }
 
 #rotate-btn:active {
   transform: scale(0.9);
+}
+
+#background-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  z-index: 20;
+  left: calc(50% - 90px);
+  bottom: 38px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  color: #111;
+  background: rgba(0,0,0,0.08);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  transition: transform 0.1s ease;
+  padding: 0;
+  font: 700 20px/1 monospace;
+}
+
+#background-toggle-btn:active {
+  transform: scale(0.9);
+}
+
+body.dark-background #rotate-btn,
+body.dark-background #background-toggle-btn {
+  color: white;
+  background: rgba(255,255,255,0.15);
+}
+
+body.dark-background #rotate-btn svg {
+  color: white;
 }
 
 @media (max-width: 768px) {
@@ -180,6 +220,10 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  background: #ffffff;
+}
+
+body.dark-background #camera-prompt {
   background: #0a0a0f;
 }
 
