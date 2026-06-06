@@ -4,12 +4,16 @@
   "type": "module",
   "private": true,
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "wrangler": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "scripts": {
-    "dev": "bun --hot run server.ts"
+    "dev": "bun --hot run server.ts",
+    "build": "bun run scripts/build-static.ts",
+    "preview": "bun run build && wrangler dev --local",
+    "deploy": "bun run build && wrangler deploy"
   }
 }
