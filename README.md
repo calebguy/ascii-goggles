@@ -6,7 +6,7 @@
 
 ```bash
 bun install
-bun run server.ts
+bun dev
 ```
 
 Open http://localhost:3000

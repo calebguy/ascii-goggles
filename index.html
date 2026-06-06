@@ -18,7 +18,7 @@
   <meta name="twitter:image" content="https://res.cloudinary.com/dm9gwanrg/image/upload/v1772926379/seeing-ascii-edited_c7hcwy.png">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="dark-background">
 
 <div id="ascii-container">
   <canvas id="ascii-canvas"></canvas>
@@ -32,7 +32,7 @@
     </div>
   </div>
   <button id="rotate-btn" aria-label="Rotate camera"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path></svg></button>
-  <button id="background-toggle-btn" type="button" aria-label="Switch to black background" aria-pressed="false">◐</button>
+  <button id="background-toggle-btn" type="button" aria-label="Switch to white background" aria-pressed="true">◐</button>
 </div>
 
 <div id="camera-prompt">
@@ -63,13 +63,14 @@ let frameCount = 0;
 let lastFpsTime = performance.now();
 const LIGHT_BACKGROUND = '#ffffff';
 const DARK_BACKGROUND = '#0a0a0f';
-let canvasBackground = LIGHT_BACKGROUND;
-let darkBackground = false;
+let canvasBackground = DARK_BACKGROUND;
+let darkBackground = true;
 
 const FONT_FAMILY = 'Courier New, Courier, monospace';
 let charW, charH, fontSize;
 const LETTER_X_SCALE = 0.62;
 const LETTER_Y_SCALE = 0.5;
+const DEFAULT_LETTER_SCALE = 1.25;
 
 
 function measureFont(size) {
@@ -459,7 +460,7 @@ function render() {
   const screenH = window.innerHeight * devicePixelRatio;
   const videoAspect = vw / vh;
 
-  const targetFontSize = Math.max(4, Math.floor(screenW / cols / 0.6));
+  const targetFontSize = Math.max(4, Math.floor((screenW / cols / 0.6) * DEFAULT_LETTER_SCALE));
   measureFont(targetFontSize);
 
   const cellAspect = charW / charH;
