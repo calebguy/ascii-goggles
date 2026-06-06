@@ -56,7 +56,7 @@ const fpsCounter = document.getElementById('fps-counter');
 const backgroundToggleBtn = document.getElementById('background-toggle-btn');
 
 const isMobile = window.matchMedia('(max-width: 768px), (hover: none)').matches;
-let cols = isMobile ? 90 : 120;
+let cols = isMobile ? 120 : 160;
 let mirror = true;
 let running = false;
 let frameCount = 0;
@@ -68,8 +68,8 @@ let darkBackground = false;
 
 const FONT_FAMILY = 'Courier New, Courier, monospace';
 let charW, charH, fontSize;
-const LETTER_X_SCALE = 0.78;
-const LETTER_Y_SCALE = 0.62;
+const LETTER_X_SCALE = 0.62;
+const LETTER_Y_SCALE = 0.5;
 
 
 function measureFont(size) {
