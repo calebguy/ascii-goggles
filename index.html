@@ -222,18 +222,27 @@ const lockThumb = document.getElementById('lock-thumb');
 
 const HOLD_TO_RECORD_MS = 380;
 const LOCK_DRAG_THRESHOLD = 80; // px to drag right to lock
+const LOCK_HIGHLIGHT_RATIO = 0.7;
+const CAPTURE_CLICK_SUPPRESSION_MS = 500;
 let holdTimer = null;
 let activePointerId = null;
 let didHoldToRecord = false;
 let recordingLocked = false;
 let pointerStartX = 0;
+let pointerCurrentX = 0;
 let recorder = null;
 let recorderChunks = [];
 let recordingStream = null;
 
 let pendingShareBlob = null; // { blob, filename, mime } awaiting a click to share
+let shouldIgnoreNextCaptureClick = false;
 
-screenshotBtn.addEventListener('click', () => {
+screenshotBtn.addEventListener('click', (e) => {
+  if (shouldIgnoreNextCaptureClick) {
+    shouldIgnoreNextCaptureClick = false;
+    e.preventDefault();
+    return;
+  }
   // Share pending blob from hold-and-release, or stop locked recording
   if (recordingLocked) {
     stopAndShareRecording();
@@ -251,6 +260,7 @@ screenshotBtn.addEventListener('pointerdown', (e) => {
   if (activePointerId !== null) return;
   activePointerId = e.pointerId;
   pointerStartX = e.clientX;
+  pointerCurrentX = e.clientX;
   didHoldToRecord = false;
   screenshotBtn.setPointerCapture(e.pointerId);
   holdTimer = setTimeout(() => {
@@ -258,16 +268,23 @@ screenshotBtn.addEventListener('pointerdown', (e) => {
     startRecording();
     lockTrack.classList.add('visible');
     rotateBtn.style.display = 'none';
+    updateLockProgress(pointerCurrentX);
   }, HOLD_TO_RECORD_MS);
 });
 
 screenshotBtn.addEventListener('pointermove', (e) => {
-  if (e.pointerId !== activePointerId || !didHoldToRecord || recordingLocked) return;
-  const dx = e.clientX - pointerStartX;
+  if (e.pointerId !== activePointerId || recordingLocked) return;
+  pointerCurrentX = e.clientX;
+  if (!didHoldToRecord) return;
+  updateLockProgress(pointerCurrentX);
+});
+
+function updateLockProgress(clientX) {
+  const dx = clientX - pointerStartX;
   const clampedDx = Math.max(0, Math.min(LOCK_DRAG_THRESHOLD, dx));
   lockThumb.style.transition = 'none';
   lockThumb.style.transform = `translateX(${clampedDx}px)`;
-  if (clampedDx / LOCK_DRAG_THRESHOLD > 0.7) {
+  if (clampedDx / LOCK_DRAG_THRESHOLD > LOCK_HIGHLIGHT_RATIO) {
     lockIcon.classList.add('highlight');
   } else {
     lockIcon.classList.remove('highlight');
@@ -275,11 +292,18 @@ screenshotBtn.addEventListener('pointermove', (e) => {
   if (dx >= LOCK_DRAG_THRESHOLD) {
     enterLockedMode();
   }
-});
+}
 
 screenshotBtn.addEventListener('pointerup', (e) => {
   if (e.pointerId !== activePointerId) return;
-  if (recordingLocked) return;
+  if (recordingLocked) {
+    activePointerId = null;
+    shouldIgnoreNextCaptureClick = true;
+    setTimeout(() => {
+      shouldIgnoreNextCaptureClick = false;
+    }, CAPTURE_CLICK_SUPPRESSION_MS);
+    return;
+  }
   resetLockTrack();
   if (holdTimer) {
     clearTimeout(holdTimer);
@@ -299,7 +323,10 @@ screenshotBtn.addEventListener('pointerup', (e) => {
 
 screenshotBtn.addEventListener('pointercancel', (e) => {
   if (e.pointerId !== activePointerId) return;
-  if (recordingLocked) return;
+  if (recordingLocked) {
+    activePointerId = null;
+    return;
+  }
   resetLockTrack();
   resetCaptureGesture();
   if (isRecording()) stopRecording();
@@ -320,7 +347,6 @@ function resetLockTrack() {
 
 function enterLockedMode() {
   recordingLocked = true;
-  activePointerId = null;
   resetLockTrack();
   screenshotBtn.classList.remove('recording');
   screenshotBtn.classList.add('recording-locked');
